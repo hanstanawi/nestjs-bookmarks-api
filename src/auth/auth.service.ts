@@ -9,10 +9,17 @@ import * as argon from 'argon2';
 import { User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
+
   async login({ email, password }: LoginDto) {
     // find user by email
     const existingUser = await this.prismaService.user.findUnique({
@@ -32,8 +39,7 @@ export class AuthService {
       throw new ForbiddenException('Unknown credentials');
     }
 
-    // return user (will be changed to jwt token)
-    return existingUser;
+    return this.signToken(existingUser.id, email);
   }
 
   async signup({
@@ -70,5 +76,26 @@ export class AuthService {
       }
       throw err;
     }
+  }
+
+  async signToken(
+    userId: number,
+    email: string,
+  ): Promise<{ access_token: string }> {
+    const data = {
+      sub: userId,
+      email,
+    };
+
+    const secret = this.configService.get('JWT_SECRET');
+
+    const token = await this.jwtService.signAsync(data, {
+      secret,
+      expiresIn: '15m',
+    });
+
+    return {
+      access_token: token,
+    };
   }
 }
