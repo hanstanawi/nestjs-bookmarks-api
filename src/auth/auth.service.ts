@@ -1,16 +1,16 @@
+import * as argon from 'argon2';
 import {
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { SignupDto } from './dto';
-import * as argon from 'argon2';
-import { User } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+
+import { PrismaService } from '../prisma/prisma.service';
+import { SignupDto, LoginDto } from './dto';
+import { IToken } from './type';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +20,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async login({ email, password }: LoginDto) {
+  async login({ email, password }: LoginDto): Promise<IToken> {
     // find user by email
     const existingUser = await this.prismaService.user.findUnique({
       where: { email },
@@ -47,7 +47,7 @@ export class AuthService {
     password,
     firstName,
     lastName,
-  }: SignupDto): Promise<Partial<User>> {
+  }: SignupDto): Promise<IToken> {
     const hash = await argon.hash(password);
 
     try {
@@ -67,7 +67,7 @@ export class AuthService {
           updatedAt: true,
         },
       });
-      return user;
+      return this.signToken(user.id, user.email);
     } catch (err) {
       if (err instanceof PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
@@ -78,10 +78,7 @@ export class AuthService {
     }
   }
 
-  async signToken(
-    userId: number,
-    email: string,
-  ): Promise<{ access_token: string }> {
+  async signToken(userId: number, email: string): Promise<IToken> {
     const data = {
       sub: userId,
       email,
