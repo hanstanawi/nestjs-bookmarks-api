@@ -1,4 +1,5 @@
 import { SignupDto } from 'src/auth/dto';
+import { UpdateUserDto } from 'src/user/dto';
 
 export const userStub = (): SignupDto => {
   return {
@@ -13,5 +14,13 @@ export const userWithNameStub = (): SignupDto => {
     password: '123',
     firstName: 'Hans',
     lastName: 'Tanawi',
+  };
+};
+
+export const updateUserStub = (): UpdateUserDto => {
+  return {
+    email: 'test@test.com',
+    firstName: 'Hans',
+    lastName: 'Test',
   };
 };
